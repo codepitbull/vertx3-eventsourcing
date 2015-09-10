@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Join the game</title>
+    </head>
+    <body>
+        <form method="post" action="/api/games/{{gameid}}/spectators">
+            <label for="index">Start index</label>
+            <input type="text" maxlength="10" id="index" name="index"/>
+            <input type="submit" value="submit"/>
+        </form>
+    </body>
+</html>

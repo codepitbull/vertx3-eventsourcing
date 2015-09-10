@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Create a new game</title>
+    </head>
+    <body>
+        <form method="post" action="/api/games">
+            <label for="nr_of_players"># players</label>
+            <select id="nr_of_players" name="nr_of_players">
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+            <input type="submit" value="submit"/>
+        </form>
+    </body>
+</html>
