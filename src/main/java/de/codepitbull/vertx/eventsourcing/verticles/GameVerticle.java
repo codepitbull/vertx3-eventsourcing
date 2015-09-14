@@ -3,6 +3,7 @@ package de.codepitbull.vertx.eventsourcing.verticles;
 import de.codepitbull.vertx.eventsourcing.entity.Game;
 import de.codepitbull.vertx.eventsourcing.entity.Player;
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -15,6 +16,7 @@ import rx.observables.ConnectableObservable;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.*;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.*;
 import static de.codepitbull.vertx.eventsourcing.constants.FailureCodesEnum.FAILURE_GAME_FULL;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.PLAYERS;
@@ -30,9 +32,6 @@ import static org.apache.commons.lang3.Validate.notNull;
 public class GameVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(GameVerticle.class);
 
-    public static final String ADDR_GAME_BASE = "game.";
-    public static final String ADDR_BROWSER_GAME_BASE = "browser.game.";
-
     private Game game;
 
     private JsonArray additionalActions = new JsonArray();
@@ -45,7 +44,7 @@ public class GameVerticle extends AbstractVerticle {
                 .roundId(0)
                 .build();
 
-        MessageConsumer<JsonObject> gameConsumer = vertx.eventBus().<JsonObject>consumer(ADDR_GAME_BASE + game.getGameId());
+        MessageConsumer<JsonObject> gameConsumer = vertx.eventBus().<JsonObject>consumer(GAME_BASE + game.getGameId());
 
         ConnectableObservable<Message<JsonObject>> gameConsumerObservable = gameConsumer.toObservable().publish();
 
@@ -61,9 +60,15 @@ public class GameVerticle extends AbstractVerticle {
 
         gameConsumerObservable.connect();
 
-
-        vertx.eventBus().publish(ReplayVerticle.ADDR_REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson());
-        vertx.setPeriodic(2000, time -> vertx.eventBus().publish(ReplayVerticle.ADDR_REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson()));
+        //send periodic updates
+        vertx.eventBus().publish(REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson());
+        vertx.setPeriodic(2000, time -> {
+            vertx.eventBus().send(REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson(), new DeliveryOptions().setSendTimeout(30),
+                    result -> {
+                        if(result.failed())
+                            LOG.error("Failed storing Snapshot", result.cause());
+                    });
+        });
 
         gameConsumer.completionHandlerObservable().subscribe(
                 success -> {
@@ -77,6 +82,10 @@ public class GameVerticle extends AbstractVerticle {
         );
     }
 
+    /**
+     * Called whenever a round has elapsed to process all commands that piled up in the mean time.
+     * @param msgs
+     */
     public void playerAction(List<Message<JsonObject>> msgs) {
         JsonArray movedPlayers = msgs.stream()
                 .map(msg -> msg.body())
@@ -107,11 +116,22 @@ public class GameVerticle extends AbstractVerticle {
                 .put(PLAYERS, movedPlayers)
                 .put(ROUND_ID, game.incrementAndGetRoundId())
                 .put(ACTIONS, additionalActions.copy());
-        vertx.eventBus().publish(ADDR_BROWSER_GAME_BASE + game.getGameId(),update);
-        vertx.eventBus().publish(ReplayVerticle.ADDR_REPLAY_UPDATES_BASE + game.getGameId(), update);
+
+        // send updates
+        vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update, new DeliveryOptions().setSendTimeout(30),
+                result -> {
+                    if (result.succeeded())
+                        vertx.eventBus().publish(BROWSER_GAME_BASE + game.getGameId(), update);
+                    else
+                        LOG.error("Failed storing event", result.cause());
+                });
         additionalActions.clear();
     }
 
+    /**
+     * Called when an event for player registration has been received.
+     * @param msg
+     */
     public void registerPlayer(Message<JsonObject> msg) {
         if (game.currentNumPlayers() < game.getNumPlayers()) {
             Integer playerId = game.currentNumPlayers();

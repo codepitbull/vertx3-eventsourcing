@@ -1,5 +1,6 @@
 package de.codepitbull.vertx.eventsourcing.verticles;
 
+import de.codepitbull.vertx.eventsourcing.constants.Addresses;
 import de.codepitbull.vertx.eventsourcing.constants.Constants;
 import de.codepitbull.vertx.eventsourcing.entity.Game;
 import de.codepitbull.vertx.eventsourcing.entity.Player;
@@ -15,7 +16,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.*;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameVerticle.*;
 
 /**
  *
@@ -42,7 +42,7 @@ public class GameVerticleTest {
     @Test
     public void testSetPlayerNameAndGetPlayerId(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>send(ADDR_GAME_BASE + DEFAULT_GAME_ID,
+        rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
                 new JsonObject()
                         .put(Constants.ACTION, Constants.ACTION_REG)
                         .put(Constants.PLAYER_NAME, "player1")
@@ -57,14 +57,14 @@ public class GameVerticleTest {
     public void testGetSnapshot(TestContext ctx) {
         Async async = ctx.async();
         //name player1
-        rule.vertx().eventBus().<Integer>send(ADDR_GAME_BASE + DEFAULT_GAME_ID,
+        rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
                 new JsonObject()
                         .put(Constants.ACTION, Constants.ACTION_REG)
                         .put(Constants.PLAYER_NAME, "player1")
                 , resp -> {
                     ctx.assertEquals(0, resp.result().body());
                     //Request game snapshot
-                    rule.vertx().eventBus().<JsonObject>send(ADDR_GAME_BASE + DEFAULT_GAME_ID, new JsonObject().put(Constants.ACTION, Constants.ACTION_SNAPSHOT), snapshot -> {
+                    rule.vertx().eventBus().<JsonObject>send(Addresses.GAME_BASE + DEFAULT_GAME_ID, new JsonObject().put(Constants.ACTION, Constants.ACTION_SNAPSHOT), snapshot -> {
                         JsonObject gameJson = Game.builder()
                                 .roundId(0).numPlayers(2).gameId(1)
                                 .player(Player.builder().id(0).name("player1").x(3).y(5).build())
@@ -78,7 +78,9 @@ public class GameVerticleTest {
     @Test
     public void testJoinAndStartAndPlayGame(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<JsonObject>localConsumer(ADDR_BROWSER_GAME_BASE + "1").handler(req -> {
+        rule.vertx().eventBus().localConsumer(Addresses.REPLAY_UPDATES_BASE + DEFAULT_GAME_ID).handler(req -> req.reply(true));
+        rule.vertx().eventBus().localConsumer(Addresses.REPLAY_SNAPSHOTS_BASE + DEFAULT_GAME_ID).handler(req -> req.reply(true));
+        rule.vertx().eventBus().<JsonObject>localConsumer(Addresses.BROWSER_GAME_BASE + "1").handler(req -> {
             //wait for a response to our move-left-command
             if(req.body().containsKey(PLAYERS) && req.body().getJsonArray(PLAYERS).size() == 1) {
                 JsonObject player = req.body().getJsonArray(PLAYERS).getJsonObject(0);
@@ -90,18 +92,18 @@ public class GameVerticleTest {
             }
 
             //send move-left-command for player1
-            rule.vertx().eventBus().send(ADDR_GAME_BASE + DEFAULT_GAME_ID,
+            rule.vertx().eventBus().send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
                     new JsonObject()
                             .put(Constants.ACTION, Constants.ACTION_MOVE)
                             .put(PLAYER_ID, 0).put(Constants.ACTION_MOVE, "l"));
         });
 
-        rule.vertx().eventBus().<Integer>send(ADDR_GAME_BASE + DEFAULT_GAME_ID,
+        rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
                 new JsonObject()
                         .put(Constants.ACTION, Constants.ACTION_REG)
                         .put(Constants.PLAYER_NAME, "player1"));
 
-        rule.vertx().eventBus().<Integer>send(ADDR_GAME_BASE + DEFAULT_GAME_ID,
+        rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
                 new JsonObject()
                         .put(Constants.ACTION, Constants.ACTION_REG)
                         .put(Constants.PLAYER_NAME, "player2"));

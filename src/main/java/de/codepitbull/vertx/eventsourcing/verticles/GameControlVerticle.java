@@ -11,23 +11,19 @@ import io.vertx.rxjava.core.eventbus.Message;
 import java.util.HashMap;
 import java.util.Map;
 
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.*;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.GAME_ID;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.NR_PLAYERS;
 import static de.codepitbull.vertx.eventsourcing.constants.FailureCodesEnum.*;
 
 /**
  * This verticle takes care of managing game instances.
- * It is responsible for (und)deploying of {@link GameVerticle} and {@link ReplayVerticle}
+ * It is responsible for (und)deploying of {@link GameVerticle} and {@link EventStoreVerticle}
  *
  * @author Jochen Mader
  */
 public class GameControlVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(GameControlVerticle.class);
-
-    public static final String ADDRESS_GAMES_CREATE = "games.create";
-    public static final String ADDRESS_GAMES_GET_ONE = "games.get";
-    public static final String ADDRESS_GAMES_DELETE = "games.delete";
-    public static final String ADDRESS_GAMES_LIST = "games.list";
 
     private Integer gameCounter = 0;
     private Map<Integer, Integer> gameIdToNrOfPlayersMap = new HashMap<>();
@@ -35,13 +31,17 @@ public class GameControlVerticle extends AbstractVerticle {
 
     @Override
     public void start() throws Exception {
-        vertx.eventBus().localConsumer(ADDRESS_GAMES_GET_ONE, this::getGame);
-        vertx.eventBus().localConsumer(ADDRESS_GAMES_CREATE, this::createGame);
-        vertx.eventBus().localConsumer(ADDRESS_GAMES_DELETE, this::deleteGame);
-        vertx.eventBus().localConsumer(ADDRESS_GAMES_LIST, this::listOfGames);
+        vertx.eventBus().localConsumer(GAMES_GET_ONE, this::getGame);
+        vertx.eventBus().localConsumer(GAMES_CREATE, this::createGame);
+        vertx.eventBus().localConsumer(GAMES_DELETE, this::deleteGame);
+        vertx.eventBus().localConsumer(GAMES_LIST, this::listOfGames);
         LOG.info("Deployed "+GameControlVerticle.class.getName());
     }
 
+    /**
+     * Called when data about a specific game s received.
+     * @param req
+     */
     public void getGame(Message<Integer> req) {
         if(gameIdToNrOfPlayersMap.containsKey(req.body()))
             req.reply(new JsonObject()
@@ -51,10 +51,15 @@ public class GameControlVerticle extends AbstractVerticle {
             req.fail(FAILURE_GAME_DOES_NOT_EXIST.intValue(), "Game doesn't exist");
     }
 
+    /**
+     * Called to create a game. Will register the required {@link GameVerticle} and {@link EventStoreVerticle}
+     * to handle it.
+     * @param req
+     */
     public void createGame(Message<Integer> req) {
         int gameId = ++gameCounter;
         //deploy verticle for game replay
-        vertx.deployVerticle(ReplayVerticle.class.getName(), new DeploymentOptions().setConfig(
+        vertx.deployVerticle(EventStoreVerticle.class.getName(), new DeploymentOptions().setConfig(
                 new JsonObject()
                         .put(GAME_ID, gameId)), replayDeploymentRes -> {
                 //deploythe actual game handling verticle
@@ -74,6 +79,11 @@ public class GameControlVerticle extends AbstractVerticle {
         });
     }
 
+    /**
+     * Handles deletion of a game and all associated undeployments.
+     * TODO: Not working, see commented code
+     * @param req
+     */
     public void deleteGame(Message<Integer> req) {
         String deploymentId = gameIdToDeploymentIdMap.remove(req.body());
         gameIdToNrOfPlayersMap.remove(req.body());
@@ -96,6 +106,10 @@ public class GameControlVerticle extends AbstractVerticle {
         }
     }
 
+    /**
+     * Replies with the list if currently running games.
+     * @param req
+     */
     public void listOfGames(Message<Integer> req) {
         JsonArray ret = new JsonArray();
         gameIdToNrOfPlayersMap.entrySet().forEach(elem -> ret.add(

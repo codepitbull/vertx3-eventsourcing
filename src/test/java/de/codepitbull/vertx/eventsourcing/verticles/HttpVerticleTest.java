@@ -14,9 +14,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.CONFIG_PORT;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameControlVerticle.ADDRESS_GAMES_CREATE;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameControlVerticle.ADDRESS_GAMES_GET_ONE;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameVerticle.ADDR_GAME_BASE;
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.GAMES_CREATE;
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.GAMES_GET_ONE;
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.GAME_BASE;
 import static de.codepitbull.vertx.eventsourcing.verticles.HttpVerticle.URL_GAMEID;
 import static io.vertx.core.http.HttpHeaders.*;
 
@@ -43,12 +43,12 @@ public class HttpVerticleTest {
     @Test
     public void testCreateAndGetGame(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>localConsumer(ADDRESS_GAMES_CREATE).handler(req -> {
+        rule.vertx().eventBus().<Integer>localConsumer(GAMES_CREATE).handler(req -> {
             ctx.assertEquals(2, req.body());
             req.reply(1);
         });
 
-        rule.vertx().eventBus().<Integer>localConsumer(ADDRESS_GAMES_GET_ONE).handler(req -> {
+        rule.vertx().eventBus().<Integer>localConsumer(GAMES_GET_ONE).handler(req -> {
             ctx.assertEquals(1, req.body());
             req.reply(1);
         });
@@ -90,7 +90,7 @@ public class HttpVerticleTest {
     @Test
     public void testGetPlayers(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>localConsumer(ADDRESS_GAMES_GET_ONE).handler(req ->
+        rule.vertx().eventBus().<Integer>localConsumer(GAMES_GET_ONE).handler(req ->
                 req.reply(new JsonObject().put(URL_GAMEID, req.body())));
 
         httpClient()
@@ -107,9 +107,9 @@ public class HttpVerticleTest {
     @Test
     public void testCreatePlayer(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>localConsumer(ADDR_GAME_BASE + "1").handler(req -> req.reply(2));
+        rule.vertx().eventBus().<Integer>localConsumer(GAME_BASE + "1").handler(req -> req.reply(2));
 
-        rule.vertx().eventBus().<Integer>consumer(ADDRESS_GAMES_GET_ONE).handler(req ->
+        rule.vertx().eventBus().<Integer>consumer(GAMES_GET_ONE).handler(req ->
             req.reply(new JsonObject().put(URL_GAMEID, req.body())));
 
         httpClient()
@@ -128,9 +128,9 @@ public class HttpVerticleTest {
     @Test
     public void testLoadGame(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>localConsumer(ADDR_GAME_BASE + "1").handler(req -> req.reply(2));
+        rule.vertx().eventBus().<Integer>localConsumer(GAME_BASE + "1").handler(req -> req.reply(2));
 
-        rule.vertx().eventBus().<Integer>consumer(ADDRESS_GAMES_GET_ONE).handler(req ->
+        rule.vertx().eventBus().<Integer>consumer(GAMES_GET_ONE).handler(req ->
                 req.reply(new JsonObject().put(URL_GAMEID, req.body())));
 
         httpClient()

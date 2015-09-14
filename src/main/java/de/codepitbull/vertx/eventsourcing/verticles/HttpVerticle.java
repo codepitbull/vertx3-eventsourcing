@@ -1,5 +1,6 @@
 package de.codepitbull.vertx.eventsourcing.verticles;
 
+import de.codepitbull.vertx.eventsourcing.constants.Addresses;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -17,9 +18,9 @@ import io.vertx.rxjava.ext.web.templ.HandlebarsTemplateEngine;
 import io.vertx.rxjava.ext.web.templ.TemplateEngine;
 
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.*;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameControlVerticle.ADDRESS_GAMES_CREATE;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameControlVerticle.ADDRESS_GAMES_GET_ONE;
-import static de.codepitbull.vertx.eventsourcing.verticles.GameVerticle.ADDR_GAME_BASE;
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.GAMES_CREATE;
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.GAMES_GET_ONE;
+import static de.codepitbull.vertx.eventsourcing.constants.Addresses.GAME_BASE;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.vertx.core.http.HttpHeaders.LOCATION;
 import static io.vertx.core.http.HttpHeaders.TEXT_HTML;
@@ -95,7 +96,7 @@ public class HttpVerticle extends AbstractVerticle {
     public void getPlayers(RoutingContext ctx) {
         Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
         ctx.put(URL_GAMEID, gameId);
-        vertx.eventBus().send(ADDRESS_GAMES_GET_ONE, gameId,
+        vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
                     if (res.succeeded())
                         engine.render(ctx, "templates/player.hbs", result -> ctx.response().end(result.result()));
@@ -112,7 +113,7 @@ public class HttpVerticle extends AbstractVerticle {
                 .put(ACTION, ACTION_REG)
                 .put(PLAYER_NAME, ctx.request().formAttributes().get(FORM_PLAYER_NAME));
 
-        vertx.eventBus().send(ADDR_GAME_BASE + gameId, req, res -> {
+        vertx.eventBus().send(GAME_BASE + gameId, req, res -> {
             if (res.failed())
                 ctx.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).end(res.cause().toString());
             else
@@ -126,7 +127,7 @@ public class HttpVerticle extends AbstractVerticle {
 
     public void createGame(RoutingContext ctx) {
         Integer nrOfPlayers = Integer.valueOf(ctx.request().formAttributes().get(FORM_NR_OF_PLAYERS));
-        vertx.eventBus().<Integer>send(ADDRESS_GAMES_CREATE, nrOfPlayers, resp -> {
+        vertx.eventBus().<Integer>send(GAMES_CREATE, nrOfPlayers, resp -> {
             if (resp.succeeded())
                 ctx.response().setStatusCode(MOVED_PERMANENTLY.code()).putHeader(LOCATION.toString(), "/api/games/" + resp.result().body()).end();
             else
@@ -139,7 +140,7 @@ public class HttpVerticle extends AbstractVerticle {
         Integer playerid = Integer.parseInt(ctx.request().getParam(URL_PLAYERID));
         ctx.put(URL_GAMEID, gameId);
         ctx.put(URL_PLAYERID, playerid);
-        vertx.eventBus().send(ADDRESS_GAMES_GET_ONE, gameId,
+        vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
                     if (res.succeeded())
                         engine.render(ctx, "templates/playgame.hbs", result -> ctx.response().end(result.result()));
@@ -157,7 +158,7 @@ public class HttpVerticle extends AbstractVerticle {
     public void getGame(RoutingContext ctx) {
         Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
         ctx.put(URL_GAMEID, gameId);
-        vertx.eventBus().send(ADDRESS_GAMES_GET_ONE, gameId,
+        vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
                     if (res.succeeded())
                         engine.render(ctx, "templates/game.hbs", result -> ctx.response().end(result.result()));
@@ -170,7 +171,7 @@ public class HttpVerticle extends AbstractVerticle {
     public void getSpectators(RoutingContext ctx) {
         Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
         ctx.put(URL_GAMEID, gameId);
-        vertx.eventBus().send(ADDRESS_GAMES_GET_ONE, gameId,
+        vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
                     if (res.succeeded())
                         engine.render(ctx, "templates/spectator.hbs", result -> ctx.response().end(result.result()));
@@ -186,7 +187,7 @@ public class HttpVerticle extends AbstractVerticle {
         JsonObject req = new JsonObject()
                 .put(REPLAY_INDEX, Integer.parseInt(ctx.request().formAttributes().get(FORM_SPECTATOR_INDEX)));
 
-        vertx.eventBus().send(ReplayVerticle.ADDR_REPLAY_REGISTER_BASE + gameId, req, res -> {
+        vertx.eventBus().send(Addresses.REPLAY_REGISTER_BASE + gameId, req, res -> {
             if (res.failed())
                 ctx.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).end(res.cause().toString());
             else
@@ -199,7 +200,7 @@ public class HttpVerticle extends AbstractVerticle {
         Integer spectatorid = Integer.parseInt(ctx.request().getParam(URL_SPECTATORID));
         ctx.put(URL_GAMEID, gameId);
         ctx.put(URL_SPECTATORID, spectatorid);
-        vertx.eventBus().<Integer>send(ADDRESS_GAMES_GET_ONE, gameId,
+        vertx.eventBus().<Integer>send(GAMES_GET_ONE, gameId,
                 res -> {
                     if (res.succeeded()) {
                         engine.render(ctx, "templates/watchgame.hbs", result -> ctx.response().end(result.result()));
