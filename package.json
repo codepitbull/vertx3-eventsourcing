@@ -2,10 +2,13 @@
   "name": "eventsourcing",
   "version": "0.0.1",
   "devDependencies": {
-    "bower": "^1.4.1",
-    "gulp": "^3.9.0",
-    "gulp-bower": "^0.0.10",
-    "gulp-concat": "^2.6.0"
+    "gulp": "^3.9.0"
+  },
+  "dependencies": {
+    "vertx3-eventbus-client": "3.0.0-1",
+    "requirejs": "2.1.20",
+    "phaser": "2.4.3",
+    "sockjs": "0.3.4"
   },
   "scripts": {
     "build": "gulp build"
