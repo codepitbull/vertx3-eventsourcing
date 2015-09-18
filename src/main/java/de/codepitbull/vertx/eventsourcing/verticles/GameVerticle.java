@@ -1,5 +1,6 @@
 package de.codepitbull.vertx.eventsourcing.verticles;
 
+import de.codepitbull.vertx.eventsourcing.PlayerActionHandler;
 import de.codepitbull.vertx.eventsourcing.entity.Game;
 import de.codepitbull.vertx.eventsourcing.entity.Player;
 import io.vertx.core.Future;
@@ -13,7 +14,9 @@ import io.vertx.rxjava.core.eventbus.Message;
 import io.vertx.rxjava.core.eventbus.MessageConsumer;
 import rx.observables.ConnectableObservable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static de.codepitbull.vertx.eventsourcing.constants.Addresses.*;
@@ -31,13 +34,23 @@ import static org.apache.commons.lang3.Validate.notNull;
  */
 public class GameVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(GameVerticle.class);
+    public static final String MOVE_LEFT = "l";
+    public static final String MOVE_RIGHT = "r";
+    public static final String MOVE_UP = "u";
+    public static final String MOVE_DOWN = "d";
 
     private Game game;
 
     private JsonArray additionalActions = new JsonArray();
 
+    private Map<String, PlayerActionHandler> actionToHandlerMap = new HashMap<>();
     @Override
     public void start(Future<Void> startFuture) throws Exception {
+        actionToHandlerMap.put(MOVE_LEFT, player -> player.setX(player.getX() - 1));
+        actionToHandlerMap.put(MOVE_RIGHT, player -> player.setX(player.getX() - 2));
+        actionToHandlerMap.put(MOVE_UP, player -> player.setY(player.getY() - 1));
+        actionToHandlerMap.put(MOVE_DOWN, player -> player.setY(player.getY() + 1));
+
         game = Game.builder()
                 .gameId(notNull(config().getInteger(GAME_ID)))
                 .numPlayers(notNull(config().getInteger(NR_PLAYERS)))
@@ -65,7 +78,7 @@ public class GameVerticle extends AbstractVerticle {
         vertx.setPeriodic(2000, time -> {
             vertx.eventBus().send(REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson(), new DeliveryOptions().setSendTimeout(30),
                     result -> {
-                        if(result.failed())
+                        if (result.failed())
                             LOG.error("Failed storing Snapshot", result.cause());
                     });
         });
@@ -92,20 +105,8 @@ public class GameVerticle extends AbstractVerticle {
                 .reduce(new JsonArray(),
                         (jArray, msg) -> {
                             Player player = game.getPlayers().get(msg.getInteger(PLAYER_ID));
-                            switch (msg.getString(ACTION_MOVE)) {
-                                case "l":
-                                    player.setX(player.getX() - 1);
-                                    break;
-                                case "r":
-                                    player.setX(player.getX() + 1);
-                                    break;
-                                case "u":
-                                    player.setY(player.getY() - 1);
-                                    break;
-                                case "d":
-                                    player.setY(player.getY() + 1);
-                                    break;
-                            }
+                            actionToHandlerMap.get(msg.getString(ACTION_MOVE)).action(player);
+
                             return jArray.add(new JsonObject()
                                     .put(PLAYER_ID, player.getPlayerId())
                                     .put(ACTION_MOVE, msg.getString(ACTION_MOVE)));
@@ -118,7 +119,7 @@ public class GameVerticle extends AbstractVerticle {
                 .put(ACTIONS, additionalActions.copy());
 
         // send updates
-        vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update, new DeliveryOptions().setSendTimeout(30),
+        vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update, new DeliveryOptions().setSendTimeout(200),
                 result -> {
                     if (result.succeeded())
                         vertx.eventBus().publish(BROWSER_GAME_BASE + game.getGameId(), update);
