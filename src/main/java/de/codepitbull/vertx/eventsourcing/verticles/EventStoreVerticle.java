@@ -43,41 +43,16 @@ public class EventStoreVerticle extends AbstractVerticle{
         gameId = notNull(config().getInteger(GAME_ID));
 
         MessageConsumer<JsonObject> snapshotsConsumer = vertx.eventBus().<JsonObject>consumer(REPLAY_SNAPSHOTS_BASE + gameId);
-        snapshotsConsumer
-                .handler(msg -> {
-                    snapshots.add(msg.body());
-                    msg.reply(true);
-                });
+        snapshotsConsumer.handler(this::handleSnapshots);
+
         MessageConsumer<JsonObject> updatesConsumer = vertx.eventBus().<JsonObject>consumer(REPLAY_UPDATES_BASE + gameId);
-        updatesConsumer
-                .handler(msg -> {
-                    updates.add(msg.body());
-                    msg.reply(true);
-                });
+        updatesConsumer.handler(this::handleUpdates);
 
         MessageConsumer<JsonObject> registerConsumer = vertx.eventBus().<JsonObject>consumer(REPLAY_REGISTER_BASE + gameId);
-        registerConsumer.handler(this::registerConsumer);
-        MessageConsumer<JsonObject> startConsumer = vertx.eventBus().<JsonObject>consumer(REPLAY_START_BASE + gameId);
-        startConsumer.bodyStream()
-                .handler(body -> {
-                    Integer spectatorId = body.getInteger(SPECTATOR_ID);
-                    LOG.info("Starting to stream game "+gameId+" for spectator "+spectatorId);
-                    SpectatorData data = spectatorIdToData.get(spectatorId);
-                    if(data.timeoutStream != null) data.timeoutStream.cancel();
-                    JsonObject startSnapshot = snapshots.get(data.startIndex);
-                    vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + spectatorId, startSnapshot);
-                    data.currentIndex = startSnapshot.getInteger(ROUND_ID);
-                    data.timeoutStream = vertx.periodicStream(200);
+        registerConsumer.handler(this::handleConsumerRegistration);
 
-                    data.timeoutStream.handler(interval -> {
-                        if (updates.size() > data.currentIndex + 1) {
-                            data.currentIndex++;
-                            vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + spectatorId, updates.get(data.currentIndex));
-                        } else {
-                            LOG.warn("Ran out of data to send to "+spectatorId);
-                        }
-                    });
-                });
+        MessageConsumer<JsonObject> startConsumer = vertx.eventBus().<JsonObject>consumer(REPLAY_START_BASE + gameId);
+        startConsumer.bodyStream().handler(this::handleReplay);
 
         when(
             from(registerConsumer.completionHandlerObservable())
@@ -98,13 +73,44 @@ public class EventStoreVerticle extends AbstractVerticle{
 
     }
 
-    private void registerConsumer(Message<JsonObject> msg) {
+
+    private void handleConsumerRegistration(Message<JsonObject> msg) {
         JsonObject body = msg.body();
         if(body.containsKey(REPLAY_INDEX)) {
             spectatorIdToData.put(++spectatorCounter, new SpectatorData(body.getInteger(REPLAY_INDEX)));
             msg.reply(spectatorCounter);
         }
         else msg.fail(FAILURE_MISSING_PARAMETER.intValue(), "Missing "+ REPLAY_INDEX);
+    }
+
+    private void handleReplay(JsonObject body) {
+        Integer spectatorId = body.getInteger(SPECTATOR_ID);
+        LOG.info("Starting to stream game "+gameId+" for spectator "+spectatorId);
+        SpectatorData data = spectatorIdToData.get(spectatorId);
+        if(data.timeoutStream != null) data.timeoutStream.cancel();
+        JsonObject startSnapshot = snapshots.get(data.startIndex);
+        vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + spectatorId, startSnapshot);
+        data.currentIndex = startSnapshot.getInteger(ROUND_ID);
+        data.timeoutStream = vertx.periodicStream(200);
+
+        data.timeoutStream.handler(interval -> {
+            if (updates.size() > data.currentIndex + 1) {
+                data.currentIndex++;
+                vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + spectatorId, updates.get(data.currentIndex));
+            } else {
+                LOG.warn("Ran out of data to send to " + spectatorId);
+            }
+        });
+    }
+
+    private void handleSnapshots(Message<JsonObject> msg) {
+        snapshots.add(msg.body());
+        msg.reply(true);
+    }
+
+    private void handleUpdates(Message<JsonObject> msg) {
+        updates.add(msg.body());
+        msg.reply(true);
     }
 
     private static class SpectatorData {

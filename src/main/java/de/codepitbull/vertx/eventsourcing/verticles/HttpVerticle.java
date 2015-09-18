@@ -56,11 +56,11 @@ public class HttpVerticle extends AbstractVerticle {
         router.get("/").produces(text_html).handler(this::getGames);
 
         router.get("/api/games/:gameid/spectators").produces(text_html).handler(this::getSpectators);
-        router.post("/api/games/:gameid/spectators").produces(text_html).handler(this::postSpectators);
+        router.post("/api/games/:gameid/spectators").produces(text_html).handler(this::createSpectator);
         router.get("/api/games/:gameid/spectators/:spectatorid").produces(text_html).handler(this::joinGameAsSpectator);
 
         router.get("/api/games/:gameid/players").produces(text_html).handler(this::getPlayers);
-        router.post("/api/games/:gameid/players").produces(text_html).handler(this::postPlayers);
+        router.post("/api/games/:gameid/players").produces(text_html).handler(this::createPlayer);
         router.get("/api/games/:gameid/players/:playerid").produces(text_html).handler(this::joinGameAsPlayer);
 
         router.get("/api/games").produces(text_html).handler(this::getGames);
@@ -106,7 +106,7 @@ public class HttpVerticle extends AbstractVerticle {
         );
     }
 
-    public void postPlayers(RoutingContext ctx) {
+    public void createPlayer(RoutingContext ctx) {
         Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
         ctx.put(URL_GAMEID, gameId);
         JsonObject req = new JsonObject()
@@ -181,7 +181,7 @@ public class HttpVerticle extends AbstractVerticle {
         );
     }
 
-    public void postSpectators(RoutingContext ctx) {
+    public void createSpectator(RoutingContext ctx) {
         Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
         ctx.put(URL_GAMEID, gameId);
         JsonObject req = new JsonObject()

@@ -1,9 +1,14 @@
 var gulp = require('gulp');
+var bower = require('gulp-bower');
+var concat = require('gulp-concat');
+
+gulp.task('bower', function() {
+    return bower()
+});
 
 gulp.task('copy_deps', function() {
-    return gulp.src(['./node_modules/phaser/build/phaser.js', './node_modules/vertx3-eventbus-client/vertxbus.js', './node_modules/requirejs/require.js', './node_modules/sockjs/lib/sockjs.js'])
+    return gulp.src(['./bower_components/phaser/build/phaser.js', './bower_components/vertx3-eventbus-client/vertxbus.js', './bower_components/requirejs/require.js', './bower_components/sockjs/sockjs.js'])
         .pipe(gulp.dest('./src/main/resources/webroot/js'));
 });
 
-gulp.task('build', ['copy_deps']);
-
+gulp.task('build', ['bower', 'copy_deps']);

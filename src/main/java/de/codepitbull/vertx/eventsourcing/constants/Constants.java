@@ -26,6 +26,10 @@ public class Constants {
     public static final String SNAPSHOT = "snapshot";
     public static final String POS_X = "x";
     public static final String POS_Y = "y";
+    public static final String MOVE_LEFT = "l";
+    public static final String MOVE_RIGHT = "r";
+    public static final String MOVE_UP = "u";
+    public static final String MOVE_DOWN = "d";
 
     private Constants() {}
 }

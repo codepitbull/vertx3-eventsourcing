@@ -34,10 +34,6 @@ import static org.apache.commons.lang3.Validate.notNull;
  */
 public class GameVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(GameVerticle.class);
-    public static final String MOVE_LEFT = "l";
-    public static final String MOVE_RIGHT = "r";
-    public static final String MOVE_UP = "u";
-    public static final String MOVE_DOWN = "d";
 
     private Game game;
 
@@ -73,8 +69,10 @@ public class GameVerticle extends AbstractVerticle {
 
         gameConsumerObservable.connect();
 
-        //send periodic updates
+        //send initial worldstate
         vertx.eventBus().publish(REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson());
+
+        //send periodic worldstate snapshots
         vertx.setPeriodic(2000, time -> {
             vertx.eventBus().send(REPLAY_SNAPSHOTS_BASE + game.getGameId(), game.toJson(), new DeliveryOptions().setSendTimeout(30),
                     result -> {

@@ -1,0 +1,11 @@
+{
+  "name": "eventsourcing",
+  "version": "0.0.1",
+  "dependencies": {
+    "vertx3-eventbus-client": "3.0.0",
+    "requirejs": "~2.1.20",
+    "phaser": "latest",
+    "sockjs": "0.3.4"
+  },
+  "private": true
+}
