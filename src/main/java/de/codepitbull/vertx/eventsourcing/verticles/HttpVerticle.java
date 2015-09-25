@@ -94,7 +94,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void getPlayers(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         ctx.put(URL_GAMEID, gameId);
         vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
@@ -107,7 +107,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void createPlayer(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         ctx.put(URL_GAMEID, gameId);
         JsonObject req = new JsonObject()
                 .put(ACTION, ACTION_REG)
@@ -136,7 +136,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void joinGameAsPlayer(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         Integer playerid = Integer.parseInt(ctx.request().getParam(URL_PLAYERID));
         ctx.put(URL_GAMEID, gameId);
         ctx.put(URL_PLAYERID, playerid);
@@ -156,7 +156,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void getGame(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         ctx.put(URL_GAMEID, gameId);
         vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
@@ -169,7 +169,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void getSpectators(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         ctx.put(URL_GAMEID, gameId);
         vertx.eventBus().send(GAMES_GET_ONE, gameId,
                 res -> {
@@ -182,7 +182,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void createSpectator(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         ctx.put(URL_GAMEID, gameId);
         JsonObject req = new JsonObject()
                 .put(REPLAY_INDEX, Integer.parseInt(ctx.request().formAttributes().get(FORM_SPECTATOR_INDEX)));
@@ -196,7 +196,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public void joinGameAsSpectator(RoutingContext ctx) {
-        Integer gameId = Integer.parseInt(ctx.request().getParam(URL_GAMEID));
+        String gameId = ctx.request().getParam(URL_GAMEID);
         Integer spectatorid = Integer.parseInt(ctx.request().getParam(URL_SPECTATORID));
         ctx.put(URL_GAMEID, gameId);
         ctx.put(URL_SPECTATORID, spectatorid);

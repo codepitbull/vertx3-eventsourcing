@@ -8,13 +8,16 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.eventbus.Message;
 
+import java.rmi.server.UID;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static de.codepitbull.vertx.eventsourcing.constants.Addresses.*;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.GAME_ID;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.NR_PLAYERS;
 import static de.codepitbull.vertx.eventsourcing.constants.FailureCodesEnum.*;
+import static de.codeptibull.vertx.kafka.writer.KafkaWriterVerticle.CONFIG_KAFKA_HOST;
 
 /**
  * This verticle takes care of managing game instances.
@@ -25,9 +28,8 @@ import static de.codepitbull.vertx.eventsourcing.constants.FailureCodesEnum.*;
 public class GameControlVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(GameControlVerticle.class);
 
-    private Integer gameCounter = 0;
-    private Map<Integer, Integer> gameIdToNrOfPlayersMap = new HashMap<>();
-    private Map<Integer, String> gameIdToDeploymentIdMap = new HashMap<>();
+    private Map<String, Integer> gameIdToNrOfPlayersMap = new HashMap<>();
+    private Map<String, String> gameIdToDeploymentIdMap = new HashMap<>();
 
     @Override
     public void start() throws Exception {
@@ -42,7 +44,7 @@ public class GameControlVerticle extends AbstractVerticle {
      * Called when data about a specific game s received.
      * @param req
      */
-    public void getGame(Message<Integer> req) {
+    public void getGame(Message<String> req) {
         if(gameIdToNrOfPlayersMap.containsKey(req.body()))
             req.reply(new JsonObject()
                     .put(GAME_ID, req.body())
@@ -57,25 +59,27 @@ public class GameControlVerticle extends AbstractVerticle {
      * @param req
      */
     public void createGame(Message<Integer> req) {
-        int gameId = ++gameCounter;
-        //deploy verticle for game replay
-        vertx.deployVerticle(EventStoreVerticle.class.getName(), new DeploymentOptions().setConfig(
+        String gameId = UUID.randomUUID().toString();
+        vertx.deployVerticle(KafkaEventStoreVerticle.class.getName(), new DeploymentOptions().setConfig(
                 new JsonObject()
-                        .put(GAME_ID, gameId)), replayDeploymentRes -> {
-                //deploythe actual game handling verticle
+                        .put(GAME_ID, gameId)
+                        .put(CONFIG_KAFKA_HOST, "172.16.250.15:9092")
+                ), replayDeploymentRes -> {
+                //deploy the actual game handling verticle
                 vertx.deployVerticle(GameVerticle.class.getName(), new DeploymentOptions().setConfig(
                         new JsonObject()
                                 .put(GAME_ID, gameId)
-                                .put(NR_PLAYERS, req.body())), gameDeplyomentRes -> {
-                    if (gameDeplyomentRes.succeeded()) {
-                        gameIdToNrOfPlayersMap.put(gameId, req.body());
-                        gameIdToDeploymentIdMap.put(gameId, replayDeploymentRes.result());
-                        req.reply(gameId);
-                    } else {
-                        req.fail(FAILURE_UNABLE_TO_DEPLOY_GAME_VERTICLE.intValue(), "Unable to deploy " + GameVerticle.class.getName());
-                        LOG.error("Unable to deploy " + GameVerticle.class.getName(), gameDeplyomentRes.cause());
-                    }
-                });
+                                .put(NR_PLAYERS, req.body())),
+                        gameDeplyomentRes -> {
+                            if (gameDeplyomentRes.succeeded()) {
+                                gameIdToNrOfPlayersMap.put(gameId, req.body());
+                                gameIdToDeploymentIdMap.put(gameId, replayDeploymentRes.result());
+                                req.reply(gameId);
+                            } else {
+                                req.fail(FAILURE_UNABLE_TO_DEPLOY_GAME_VERTICLE.intValue(), "Unable to deploy " + GameVerticle.class.getName());
+                                LOG.error("Unable to deploy " + GameVerticle.class.getName(), gameDeplyomentRes.cause());
+                            }
+                        });
         });
     }
 

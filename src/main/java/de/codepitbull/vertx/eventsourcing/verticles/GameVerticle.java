@@ -48,7 +48,7 @@ public class GameVerticle extends AbstractVerticle {
         actionToHandlerMap.put(MOVE_DOWN, player -> player.setY(player.getY() + 1));
 
         game = Game.builder()
-                .gameId(notNull(config().getInteger(GAME_ID)))
+                .gameId(notNull(config().getString(GAME_ID)))
                 .numPlayers(notNull(config().getInteger(NR_PLAYERS)))
                 .roundId(0)
                 .build();

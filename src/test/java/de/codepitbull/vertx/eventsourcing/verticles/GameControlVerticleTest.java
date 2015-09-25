@@ -32,8 +32,8 @@ public class GameControlVerticleTest {
     @Test
     public void testCreateGame(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>send(Addresses.GAMES_CREATE, 4, resp -> {
-            ctx.assertEquals(1, resp.result().body());
+        rule.vertx().eventBus().<String>send(Addresses.GAMES_CREATE, 4, resp -> {
+            ctx.assertNotNull(resp.result().body());
             async.complete();
         });
     }
@@ -41,9 +41,9 @@ public class GameControlVerticleTest {
     @Test
     public void testDeleteGame(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>send(Addresses.GAMES_CREATE, 4, respCreate -> {
-            ctx.assertEquals(1, respCreate.result().body());
-            rule.vertx().eventBus().<Integer>send(Addresses.GAMES_DELETE, 1, respDelete -> {
+        rule.vertx().eventBus().<String>send(Addresses.GAMES_CREATE, 4, respCreate -> {
+            String uuid = respCreate.result().body();
+            rule.vertx().eventBus().<Integer>send(Addresses.GAMES_DELETE, uuid, respDelete -> {
                 ctx.assertEquals(true, respDelete.result().body());
                 async.complete();
             });
@@ -53,11 +53,11 @@ public class GameControlVerticleTest {
     @Test
     public void testGetOneGame(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>send(Addresses.GAMES_CREATE, 4, respCreate -> {
-            ctx.assertEquals(1, respCreate.result().body());
-            rule.vertx().eventBus().<Integer>send(Addresses.GAMES_GET_ONE, 1, respDelete -> {
+        rule.vertx().eventBus().<String>send(Addresses.GAMES_CREATE, 4, respCreate -> {
+            String uuid = respCreate.result().body();
+            rule.vertx().eventBus().<Integer>send(Addresses.GAMES_GET_ONE, uuid, respDelete -> {
                 JsonObject game = new JsonObject()
-                        .put(GAME_ID, 1)
+                        .put(GAME_ID, uuid)
                         .put(NR_PLAYERS, 4);
                 ctx.assertEquals(game, respDelete.result().body());
                 async.complete();
@@ -68,11 +68,11 @@ public class GameControlVerticleTest {
     @Test
     public void testListGames(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>send(Addresses.GAMES_CREATE, 4, respCreate -> {
-            ctx.assertEquals(1, respCreate.result().body());
+        rule.vertx().eventBus().<String>send(Addresses.GAMES_CREATE, 4, respCreate -> {
+            String uuid = respCreate.result().body();
             rule.vertx().eventBus().<Integer>send(Addresses.GAMES_LIST, 1, respDelete -> {
                 JsonArray comp = new JsonArray().add(new JsonObject()
-                        .put(GAME_ID, 1)
+                        .put(GAME_ID, uuid)
                         .put(NR_PLAYERS, 4));
                 ctx.assertEquals(comp, respDelete.result().body());
                 async.complete();

@@ -49,7 +49,7 @@ public class HttpVerticleTest {
         });
 
         rule.vertx().eventBus().<Integer>localConsumer(GAMES_GET_ONE).handler(req -> {
-            ctx.assertEquals(1, req.body());
+            ctx.assertEquals("1", req.body());
             req.reply(1);
         });
 
@@ -90,7 +90,7 @@ public class HttpVerticleTest {
     @Test
     public void testGetPlayers(TestContext ctx) {
         Async async = ctx.async();
-        rule.vertx().eventBus().<Integer>localConsumer(GAMES_GET_ONE).handler(req ->
+        rule.vertx().eventBus().<String>localConsumer(GAMES_GET_ONE).handler(req ->
                 req.reply(new JsonObject().put(URL_GAMEID, req.body())));
 
         httpClient()
@@ -109,7 +109,7 @@ public class HttpVerticleTest {
         Async async = ctx.async();
         rule.vertx().eventBus().<Integer>localConsumer(GAME_BASE + "1").handler(req -> req.reply(2));
 
-        rule.vertx().eventBus().<Integer>consumer(GAMES_GET_ONE).handler(req ->
+        rule.vertx().eventBus().<String>consumer(GAMES_GET_ONE).handler(req ->
             req.reply(new JsonObject().put(URL_GAMEID, req.body())));
 
         httpClient()
@@ -130,7 +130,7 @@ public class HttpVerticleTest {
         Async async = ctx.async();
         rule.vertx().eventBus().<Integer>localConsumer(GAME_BASE + "1").handler(req -> req.reply(2));
 
-        rule.vertx().eventBus().<Integer>consumer(GAMES_GET_ONE).handler(req ->
+        rule.vertx().eventBus().<String>consumer(GAMES_GET_ONE).handler(req ->
                 req.reply(new JsonObject().put(URL_GAMEID, req.body())));
 
         httpClient()

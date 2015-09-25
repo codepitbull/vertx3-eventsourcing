@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static de.codepitbull.vertx.eventsourcing.constants.Constants.*;
 import static org.apache.commons.lang3.Validate.notNull;
 
 /**
@@ -16,19 +17,19 @@ import static org.apache.commons.lang3.Validate.notNull;
  */
 public class Game {
 
-    private Integer gameId;
+    private String gameId;
     private Integer roundId;
     private Integer numPlayers;
     private List<Player> players;
 
-    private Game(Integer gameId, Integer roundId, Integer numPlayers, List<Player> players) {
+    private Game(String gameId, Integer roundId, Integer numPlayers, List<Player> players) {
         this.gameId = gameId;
         this.roundId = roundId;
         this.players = players;
         this.numPlayers = numPlayers;
     }
 
-    public Integer getGameId() {
+    public String getGameId() {
         return gameId;
     }
 
@@ -61,11 +62,11 @@ public class Game {
 
     public JsonObject toJson() {
         return new JsonObject()
-                .put(Constants.PLAYERS, players.stream().reduce(new JsonArray(), (arr, player) -> arr.add(player.toJson()), (arr1,arr2) -> arr1.addAll(arr2)))
-                .put(Constants.GAME_ID, gameId)
-                .put(Constants.ROUND_ID, roundId)
-                .put(Constants.MSG_TYPE, Constants.SNAPSHOT)
-                .put(Constants.NR_PLAYERS, numPlayers);
+                .put(PLAYERS, players.stream().reduce(new JsonArray(), (arr, player) -> arr.add(player.toJson()), (arr1,arr2) -> arr1.addAll(arr2)))
+                .put(GAME_ID, gameId)
+                .put(ROUND_ID, roundId)
+                .put(MSG_TYPE, Constants.SNAPSHOT)
+                .put(NR_PLAYERS, numPlayers);
     }
 
     public static Builder builder() {
@@ -73,12 +74,12 @@ public class Game {
     }
 
     public static class Builder {
-        private Integer gameId;
+        private String gameId;
         private Integer roundId = 0;
         private Integer numPlayers;
         private List<Player> players = new ArrayList<>();
 
-        public Builder gameId(Integer gameId) {
+        public Builder gameId(String gameId) {
             this.gameId = gameId;
             return this;
         }

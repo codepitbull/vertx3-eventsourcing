@@ -23,7 +23,7 @@ import static de.codepitbull.vertx.eventsourcing.constants.Constants.*;
  */
 @RunWith(VertxUnitRunner.class)
 public class GameVerticleTest {
-    public static final int DEFAULT_GAME_ID = 1;
+    public static final String DEFAULT_GAME_ID = "1";
     public static final int DEFAULT_NR_PLAYERS = 2;
     @Rule
     public final RunTestOnContext rule = new RunTestOnContext();
@@ -66,7 +66,7 @@ public class GameVerticleTest {
                     //Request game snapshot
                     rule.vertx().eventBus().<JsonObject>send(Addresses.GAME_BASE + DEFAULT_GAME_ID, new JsonObject().put(Constants.ACTION, Constants.ACTION_SNAPSHOT), snapshot -> {
                         JsonObject gameJson = Game.builder()
-                                .roundId(0).numPlayers(2).gameId(1)
+                                .roundId(0).numPlayers(2).gameId("1")
                                 .player(Player.builder().id(0).name("player1").x(3).y(5).build())
                                 .build().toJson();
                         ctx.assertEquals(gameJson, snapshot.result().body());

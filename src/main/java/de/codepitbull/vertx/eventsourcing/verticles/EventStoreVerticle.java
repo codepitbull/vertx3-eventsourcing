@@ -27,20 +27,20 @@ import static rx.observables.JoinObservable.when;
  *
  * @author Jochen Mader
  */
-public class EventStoreVerticle extends AbstractVerticle{
+public class EventStoreVerticle extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(EventStoreVerticle.class);
 
-    private Integer gameId;
+    private String gameId;
     private Integer spectatorCounter = 0;
 
     private List<JsonObject> snapshots = new ArrayList<>();
     private List<JsonObject> updates = new ArrayList<>();
-    private Map<Integer, SpectatorData> spectatorIdToData= new HashMap<>();
+    private Map<Integer, SpectatorData> spectatorIdToData = new HashMap<>();
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
-        gameId = notNull(config().getInteger(GAME_ID));
+        gameId = notNull(config().getString(GAME_ID));
 
         MessageConsumer<JsonObject> snapshotsConsumer = vertx.eventBus().<JsonObject>consumer(REPLAY_SNAPSHOTS_BASE + gameId);
         snapshotsConsumer.handler(this::handleSnapshots);
@@ -55,11 +55,11 @@ public class EventStoreVerticle extends AbstractVerticle{
         startConsumer.bodyStream().handler(this::handleReplay);
 
         when(
-            from(registerConsumer.completionHandlerObservable())
-            .and(snapshotsConsumer.completionHandlerObservable())
-            .and(updatesConsumer.completionHandlerObservable())
-                    .and(startConsumer.completionHandlerObservable())
-                    .then((a, b, c, d) -> null)
+                from(registerConsumer.completionHandlerObservable())
+                        .and(snapshotsConsumer.completionHandlerObservable())
+                        .and(updatesConsumer.completionHandlerObservable())
+                        .and(startConsumer.completionHandlerObservable())
+                        .then((a, b, c, d) -> null)
         ).toObservable().subscribe(
                 success -> {
                     LOG.info("Succeeded deploying " + EventStoreVerticle.class);
@@ -73,30 +73,30 @@ public class EventStoreVerticle extends AbstractVerticle{
 
     }
 
-
     private void handleConsumerRegistration(Message<JsonObject> msg) {
         JsonObject body = msg.body();
-        if(body.containsKey(REPLAY_INDEX)) {
-            spectatorIdToData.put(++spectatorCounter, new SpectatorData(body.getInteger(REPLAY_INDEX)));
+        if (body.containsKey(REPLAY_INDEX)) {
+            ++spectatorCounter;
+            LOG.info("Registered spectator " + spectatorCounter + " for game " + gameId);
+            spectatorIdToData.put(spectatorCounter, new SpectatorData(body.getInteger(REPLAY_INDEX)));
             msg.reply(spectatorCounter);
-        }
-        else msg.fail(FAILURE_MISSING_PARAMETER.intValue(), "Missing "+ REPLAY_INDEX);
+        } else msg.fail(FAILURE_MISSING_PARAMETER.intValue(), "Missing " + REPLAY_INDEX);
     }
 
     private void handleReplay(JsonObject body) {
         Integer spectatorId = body.getInteger(SPECTATOR_ID);
-        LOG.info("Starting to stream game "+gameId+" for spectator "+spectatorId);
+        LOG.info("Streaming to "+Addresses.BROWSER_SPECTATOR_BASE + gameId + "." + spectatorId);
         SpectatorData data = spectatorIdToData.get(spectatorId);
-        if(data.timeoutStream != null) data.timeoutStream.cancel();
+        if (data.timeoutStream != null) data.timeoutStream.cancel();
         JsonObject startSnapshot = snapshots.get(data.startIndex);
-        vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + spectatorId, startSnapshot);
+        vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + gameId + "." + spectatorId, startSnapshot);
         data.currentIndex = startSnapshot.getInteger(ROUND_ID);
         data.timeoutStream = vertx.periodicStream(200);
 
         data.timeoutStream.handler(interval -> {
             if (updates.size() > data.currentIndex + 1) {
                 data.currentIndex++;
-                vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE + spectatorId, updates.get(data.currentIndex));
+                vertx.eventBus().send(Addresses.BROWSER_SPECTATOR_BASE  + gameId + "." + spectatorId, updates.get(data.currentIndex));
             } else {
                 LOG.warn("Ran out of data to send to " + spectatorId);
             }

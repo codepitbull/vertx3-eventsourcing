@@ -18,13 +18,15 @@ requirejs(["phaser", "vertxbus"], function(deps) {
     var update_queue = [];
     var cmd = null;
 
-    var gameId = parseInt(document.getElementById("gameid").value);
+    var gameId = document.getElementById("gameid").value;
     var playerId = parseInt(document.getElementById("playerid").value);
 
     var eb = new vertx.EventBus('http://localhost:8070/eventbus');
     eb.onopen = function() {
         if(playerId == -1) {
-            eb.registerHandler("browser.replay."+gameId, function(result) {
+            var spectatorId = parseInt(document.getElementById("spectatorid").value);
+            console.log("Starting spectator on browser.replay."+gameId+"."+spectatorId);
+            eb.registerHandler("browser.replay."+gameId+"."+spectatorId, function(result) {
                 if(result.type == "snapshot") {
                     gameDataInst = new gameData('map', gameId, playerId, result.players, result.round_id);
                     game = new Phaser.Game(800, 600, Phaser.AUTO, 'phaser-example', { preload: preload, create: create, update: update });
@@ -33,10 +35,12 @@ requirejs(["phaser", "vertxbus"], function(deps) {
                     update_queue.push(result)
                 }
             });
-            eb.send("replay.start."+gameId, {"id":parseInt(document.getElementById("spectatorid").value)});
+            eb.send("replay.start."+gameId, {"id": spectatorId});
         }
         else {
+            console.log("Starting player "+playerId+" for game with id "+gameId);
             eb.registerHandler("browser.game."+gameId, function(incoming) {
+                console.log(JSON.stringify(incoming))
                 update_queue.push(incoming)
             });
             eb.send("game."+gameId, {"action":"snp"}, function(result) {
