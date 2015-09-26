@@ -8,14 +8,12 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.eventbus.Message;
 
-import java.rmi.server.UID;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import static de.codepitbull.vertx.eventsourcing.constants.Addresses.*;
-import static de.codepitbull.vertx.eventsourcing.constants.Constants.GAME_ID;
-import static de.codepitbull.vertx.eventsourcing.constants.Constants.NR_PLAYERS;
+import static de.codepitbull.vertx.eventsourcing.constants.Constants.*;
 import static de.codepitbull.vertx.eventsourcing.constants.FailureCodesEnum.*;
 import static de.codeptibull.vertx.kafka.writer.KafkaWriterVerticle.CONFIG_KAFKA_HOST;
 
@@ -60,10 +58,9 @@ public class GameControlVerticle extends AbstractVerticle {
      */
     public void createGame(Message<Integer> req) {
         String gameId = UUID.randomUUID().toString();
-        vertx.deployVerticle(KafkaEventStoreVerticle.class.getName(), new DeploymentOptions().setConfig(
-                new JsonObject()
+        vertx.deployVerticle(EventStoreVerticle.class.getName(), new DeploymentOptions().setConfig(
+                config().copy()
                         .put(GAME_ID, gameId)
-                        .put(CONFIG_KAFKA_HOST, "172.16.250.15:9092")
                 ), replayDeploymentRes -> {
                 //deploy the actual game handling verticle
                 vertx.deployVerticle(GameVerticle.class.getName(), new DeploymentOptions().setConfig(

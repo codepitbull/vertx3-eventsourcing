@@ -14,8 +14,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.UUID;
+
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.GAME_ID;
 import static de.codepitbull.vertx.eventsourcing.constants.Constants.ROUND_ID;
+import static de.codeptibull.vertx.kafka.writer.KafkaWriterVerticle.CONFIG_KAFKA_HOST;
 import static java.util.stream.IntStream.range;
 
 /**
@@ -24,7 +27,8 @@ import static java.util.stream.IntStream.range;
  */
 @RunWith(VertxUnitRunner.class)
 public class EventStoreVerticleTest {
-    public static final String DEFAULT_GAME_ID = "1";
+    public static final String DEFAULT_GAME_ID = UUID.randomUUID().toString();
+    public static final String KAFKA_HOST = "172.16.250.15:9092";
     @Rule
     public final RunTestOnContext rule = new RunTestOnContext();
 
@@ -36,6 +40,7 @@ public class EventStoreVerticleTest {
                 new DeploymentOptions().setConfig(
                         new JsonObject()
                                 .put(GAME_ID, DEFAULT_GAME_ID)
+                                .put(CONFIG_KAFKA_HOST, KAFKA_HOST)
                 ),
                 ctx.asyncAssertSuccess());
         eventBus = rule.vertx().eventBus();
@@ -56,7 +61,7 @@ public class EventStoreVerticleTest {
         Async async = ctx.async();
         range(0, 10).forEach(val -> eventBus.send(Addresses.REPLAY_SNAPSHOTS_BASE + DEFAULT_GAME_ID, new JsonObject().put("sn-id", val).put(ROUND_ID, 2 + val)));
         range(0, 20).forEach(val -> eventBus.send(Addresses.REPLAY_UPDATES_BASE + DEFAULT_GAME_ID, new JsonObject().put("up-id", val)));
-        eventBus.<JsonObject>consumer(Addresses.BROWSER_SPECTATOR_BASE + 1, update -> {
+        eventBus.<JsonObject>consumer(Addresses.BROWSER_SPECTATOR_BASE + DEFAULT_GAME_ID + ".1", update -> {
             JsonObject body = update.body();
             if (body.containsKey("sn-id"))
                 ctx.assertEquals(4, body.getInteger("sn-id"));

@@ -7,6 +7,9 @@ package de.codepitbull.vertx.eventsourcing.constants;
  */
 public class Constants {
     public static final String CONFIG_PORT = "port";
+    public static final String CONFIG_IN_MEM = "in_mem";
+    public static final String CONFIG_KAFKA_HOST = "kafka_host";
+    public static final String CONFIG_KAFKA_PORT = "kafka_port";
     public static final String GAME_ID = "game_id";
     public static final String NR_PLAYERS = "nr_players";
     public static final String REPLAY_INDEX = "index";
