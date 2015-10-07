@@ -117,12 +117,17 @@ public class GameVerticle extends AbstractVerticle {
                 .put(ACTIONS, additionalActions.copy());
 
         // send updates
-        vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update, new DeliveryOptions().setSendTimeout(200),
+        // TODO: I should use a timeout but the first update takes a lot longer due to creating the topic
+        // for now I won't bother
+        vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update,
                 result -> {
                     if (result.succeeded())
                         vertx.eventBus().publish(BROWSER_GAME_BASE + game.getGameId(), update);
-                    else
+                    else{
+                        LOG.error("Failed storing "+update);
                         LOG.error("Failed storing event", result.cause());
+                    }
+
                 });
         additionalActions.clear();
     }
