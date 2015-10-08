@@ -3,6 +3,10 @@ npm install
 
 gulp build
 
+#Get Kafka stuff#
+https://github.com/codepitbull/vertx3-kafka
+
+mvn clean install
 #run it#
 Open it in your IDE and rin VertxMain.
 

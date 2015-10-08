@@ -43,7 +43,7 @@ public class GameVerticle extends AbstractVerticle {
     @Override
     public void start(Future<Void> startFuture) throws Exception {
         actionToHandlerMap.put(MOVE_LEFT, player -> player.setX(player.getX() - 1));
-        actionToHandlerMap.put(MOVE_RIGHT, player -> player.setX(player.getX() - 2));
+        actionToHandlerMap.put(MOVE_RIGHT, player -> player.setX(player.getX() + 1));
         actionToHandlerMap.put(MOVE_UP, player -> player.setY(player.getY() - 1));
         actionToHandlerMap.put(MOVE_DOWN, player -> player.setY(player.getY() + 1));
 
@@ -124,8 +124,7 @@ public class GameVerticle extends AbstractVerticle {
                     if (result.succeeded())
                         vertx.eventBus().publish(BROWSER_GAME_BASE + game.getGameId(), update);
                     else{
-                        LOG.error("Failed storing "+update);
-                        LOG.error("Failed storing event", result.cause());
+                        LOG.error("Failed storing "+update, result.cause());
                     }
 
                 });

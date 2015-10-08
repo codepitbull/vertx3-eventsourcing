@@ -57,14 +57,17 @@ public class HttpVerticle extends AbstractVerticle {
 
         router.get("/api/games/:gameid/spectators").produces(text_html).handler(this::getSpectators);
         router.post("/api/games/:gameid/spectators").produces(text_html).handler(this::createSpectator);
+
         router.get("/api/games/:gameid/spectators/:spectatorid").produces(text_html).handler(this::joinGameAsSpectator);
 
         router.get("/api/games/:gameid/players").produces(text_html).handler(this::getPlayers);
         router.post("/api/games/:gameid/players").produces(text_html).handler(this::createPlayer);
+
         router.get("/api/games/:gameid/players/:playerid").produces(text_html).handler(this::joinGameAsPlayer);
 
         router.get("/api/games").produces(text_html).handler(this::getGames);
         router.post("/api/games").produces(text_html).handler(this::createGame);
+
         router.get("/api/games/:gameid").produces(text_html).handler(this::getGame);
         router.delete("/api/games/:gameid").produces(text_html).handler(this::deleteGame);
 
