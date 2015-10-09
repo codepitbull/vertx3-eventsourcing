@@ -12,10 +12,11 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.eventbus.Message;
 import io.vertx.rxjava.core.eventbus.MessageConsumer;
+import rx.Observable;
+import rx.functions.Action1;
 import rx.observables.ConnectableObservable;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -61,8 +62,9 @@ public class GameVerticle extends AbstractVerticle {
                 .forEach(this::registerPlayer);
 
         gameConsumerObservable.filter(msg -> ACTION_MOVE.equals(msg.body().getString(ACTION)))
-                .buffer(200, TimeUnit.MILLISECONDS)
-                .forEach(this::playerAction);
+                .window(200, TimeUnit.MILLISECONDS)
+                .forEach(processRound()
+        );
 
         gameConsumerObservable.filter(msg -> ACTION_SNAPSHOT.equals(msg.body().getString(ACTION)))
                 .forEach(msg -> msg.reply(game.toJson()));
@@ -93,42 +95,33 @@ public class GameVerticle extends AbstractVerticle {
         );
     }
 
-    /**
-     * Called whenever a round has elapsed to process all commands that piled up in the mean time.
-     * @param msgs
-     */
-    public void playerAction(List<Message<JsonObject>> msgs) {
-        JsonArray movedPlayers = msgs.stream()
-                .map(msg -> msg.body())
-                .reduce(new JsonArray(),
-                        (jArray, msg) -> {
-                            Player player = game.getPlayers().get(msg.getInteger(PLAYER_ID));
-                            actionToHandlerMap.get(msg.getString(ACTION_MOVE)).action(player);
-
-                            return jArray.add(new JsonObject()
-                                    .put(PLAYER_ID, player.getPlayerId())
-                                    .put(ACTION_MOVE, msg.getString(ACTION_MOVE)));
-                        },
-                        (arr1, arr2) -> arr1.addAll(arr2)
-                );
-        JsonObject update = new JsonObject()
-                .put(PLAYERS, movedPlayers)
-                .put(ROUND_ID, game.incrementAndGetRoundId())
-                .put(ACTIONS, additionalActions.copy());
-
-        // send updates
-        // TODO: I should use a timeout but the first update takes a lot longer due to creating the topic
-        // for now I won't bother
-        vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update,
-                result -> {
-                    if (result.succeeded())
-                        vertx.eventBus().publish(BROWSER_GAME_BASE + game.getGameId(), update);
-                    else{
-                        LOG.error("Failed storing "+update, result.cause());
+    private Action1<Observable<Message<JsonObject>>> processRound() {
+        return m ->
+            m.collect(() -> new JsonArray(),
+                    (jArray, msg) -> {
+                        JsonObject body = msg.body();
+                        Player player = game.getPlayers().get(body.getInteger(PLAYER_ID));
+                        actionToHandlerMap.get(body.getString(ACTION_MOVE)).action(player);
+                        jArray.add(new JsonObject()
+                                .put(PLAYER_ID, player.getPlayerId())
+                                .put(ACTION_MOVE, body.getString(ACTION_MOVE)));
                     }
-
-                });
-        additionalActions.clear();
+            )
+            .forEach(movedPlayers -> {
+                JsonObject update = new JsonObject()
+                        .put(PLAYERS, movedPlayers)
+                        .put(ROUND_ID, game.incrementAndGetRoundId())
+                        .put(ACTIONS, additionalActions.copy());
+                additionalActions.clear();
+                vertx.eventBus().send(REPLAY_UPDATES_BASE + game.getGameId(), update,
+                        result -> {
+                            if (result.succeeded())
+                                vertx.eventBus().publish(BROWSER_GAME_BASE + game.getGameId(), update);
+                            else {
+                                LOG.error("Failed storing " + update, result.cause());
+                            }
+                        });
+            });
     }
 
     /**

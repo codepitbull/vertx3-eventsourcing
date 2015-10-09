@@ -86,27 +86,23 @@ public class GameVerticleTest {
                 JsonObject player = req.body().getJsonArray(PLAYERS).getJsonObject(0);
                 ctx.assertNotEquals(0, player.getInteger(ROUND_ID));
                 ctx.assertEquals(0, player.getInteger(PLAYER_ID));
-                System.out.println(player);
                 ctx.assertEquals("l", player.getString("mov"));
                 async.complete();
             }
-
-            //send move-left-command for player1
-            rule.vertx().eventBus().send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
-                    new JsonObject()
-                            .put(Constants.ACTION, Constants.ACTION_MOVE)
-                            .put(PLAYER_ID, 0).put(Constants.ACTION_MOVE, "l"));
         });
 
         rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
                 new JsonObject()
                         .put(Constants.ACTION, Constants.ACTION_REG)
-                        .put(Constants.PLAYER_NAME, "player1"));
-
-        rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
-                new JsonObject()
-                        .put(Constants.ACTION, Constants.ACTION_REG)
-                        .put(Constants.PLAYER_NAME, "player2"));
+                        .put(Constants.PLAYER_NAME, "player1"), pl1Registered -> rule.vertx().eventBus().<Integer>send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
+                        new JsonObject()
+                                .put(Constants.ACTION, Constants.ACTION_REG)
+                                .put(Constants.PLAYER_NAME, "player2"), pl2Registered ->
+                                //send move-left-command for player1
+                                rule.vertx().eventBus().send(Addresses.GAME_BASE + DEFAULT_GAME_ID,
+                                        new JsonObject()
+                                                .put(Constants.ACTION, Constants.ACTION_MOVE)
+                                                .put(PLAYER_ID, 0).put(Constants.ACTION_MOVE, "l"))));
 
     }
 }
